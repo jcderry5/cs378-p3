@@ -1,0 +1,48 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.container {
+  margin-top: 5%;
+}
+
+.cityBtn {
+  width: 100%;
+  font-size: 150%;
+}
+
+#searchCity {
+  margin-top: 5%;
+  font-size:130%
+}
+
+#searchCityBtn {
+  margin-left: 3%;
+  font-size: 90%;
+}
+
+#cityHeader {
+  font-size: 150%;
+  font-style: normal;
+  margin-top: 5%;
+  margin-bottom: 5%;
+}
+
+var {
+  font-style: normal;
+}
+
+.forecast{
+  font-size: 130%;
+  margin-left: 5%;
+}
