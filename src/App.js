@@ -1,19 +1,48 @@
 import './App.css';
 import React from 'react';
 import { useState, useEffect } from 'react';
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { getDatabase, ref, set, child, get } from "firebase/database";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAa-Z0hmWUeCMZWsuxWb_VPamalA0IKPBU",
+  authDomain: "hcifirebase-d373a.firebaseapp.com",
+  databaseURL: "https://hcifirebase-d373a-default-rtdb.firebaseio.com",
+  projectId: "hcifirebase-d373a",
+  storageBucket: "hcifirebase-d373a.appspot.com",
+  messagingSenderId: "1051593364533",
+  appId: "1:1051593364533:web:3d962938b430742309cd7c"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+// Initialize Firebase Authentication and get a reference to the service
+const auth = getAuth(app);
+// Initialize Realtime Database and get a reference to the service
+const database = getDatabase(app);
+
 
 
 export default function WeatherApp() {
   const BASE_ATX_URL = "https://api.open-meteo.com/v1/forecast?latitude=30.27&longitude=-97.74&hourly=temperature_2m"
   const BASE_DAL_URL = "https://api.open-meteo.com/v1/forecast?latitude=32.78&longitude=-96.81&hourly=temperature_2m"
-  const BASE_HOU_URL = "https://api.open-meteo.com/v1/forecast?latitude=29.76&longitude=-95.36&hourly=temperature_2m"
   const GEO_CODING_STUB = "https://geocoding-api.open-meteo.com/v1/search?name="
   const [time, setTime] = useState([]);
   const [temp, setTemp] = useState([]);
+  const [user, setUser] = useState([]);
+  const [userId, setUserId] = useState([]);
+  const [currentURL, setCurrentURL] = useState([]);
+  const [currentCityName, setCurrentCityName] = useState([]);
   let displayData
   
 
   async function pullJson(URL) {
+    setCurrentURL(URL)
     const response = await fetch(URL)
     const responseData = await response.json()
     let timeArr = responseData.hourly.time
@@ -24,11 +53,51 @@ export default function WeatherApp() {
 
   useEffect(() => {
     pullJson(BASE_ATX_URL)
+    setCurrentCityName("Austin")
     let cityHeader = document.getElementById("currentCityHeader");
-    cityHeader.innerText = "Austin"
+    cityHeader.innerText = currentCityName
   }, []);
 
+  useEffect(() => {
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUser(user)
+        setUserId(user.uid)
+      } else {
+        setUser(null)
+      }
+    });
+  })
+  
+  function onClickLocal() {
+    const dbRef = ref(getDatabase());
+    // Get the URL
+    get(child(dbRef, `users/${userId}/URL`)).then((snapshot) => {
+      if (snapshot.exists()) {
+        pullJson(snapshot.val());
+      } else {
+        console.log("No data available");
+      }
+    }).catch((error) => {
+      alert(error);
+    });
+
+    // Get the City Name
+    get(child(dbRef, `users/${userId}/CityName`)).then((snapshot) => {
+      if (snapshot.exists()) {
+        let cityHeader = document.getElementById("currentCityHeader");
+        cityHeader.innerText = snapshot.val()
+      } else {
+        console.log("No data available");
+      }
+    }).catch((error) => {
+      alert(error);
+    });
+    
+  }
+
   function onClickATX() {
+    setCurrentCityName("Austin")
     pullJson(BASE_ATX_URL)
     let cityHeader = document.getElementById("currentCityHeader");
     cityHeader.innerText = "Austin"
@@ -36,18 +105,14 @@ export default function WeatherApp() {
 
   function onClickDAL() {
     pullJson(BASE_DAL_URL)
+    setCurrentCityName("Dallas")
     let cityHeader = document.getElementById("currentCityHeader");
     cityHeader.innerText = "Dallas"
   }
 
-  function onClickHOU() {
-    pullJson(BASE_HOU_URL)
-    let cityHeader = document.getElementById("currentCityHeader");
-    cityHeader.innerText = "Houston"
-  }
-
   return (<>
     <div class="container">
+      <AuthHeader />
       <ThreeCityButtons />
       <CityInput />
       <CurrentCityHeader />
@@ -67,6 +132,7 @@ export default function WeatherApp() {
 
   function getCustomCity() {
     const inputCity = document.getElementById("searchCity").value
+    setCurrentCityName(inputCity)
     let cityHeader = document.getElementById("currentCityHeader");
     cityHeader.innerText = inputCity
     let encodedCityName = encodeURI(inputCity)
@@ -94,17 +160,81 @@ export default function WeatherApp() {
     pullJson(CUSTOM_URL)
   }
 
+  function AuthHeader() {
+    return (
+      <div class="row">
+        <div class="col-6">
+            <button class="auth-btn" id="login-btn" onClick={onClickLogin}> <b> Log In </b></button>
+          </div>
+        <div class="col-6">
+          <button class="auth-btn" id="logout-btn" onClick={onClickLogout}> <b> Log Out </b></button>
+        </div>
+      </div>
+    )
+  }
+
+  function onClickSignup() {
+    let newEmail = prompt("Enter your email to signup")
+    let newPassword = prompt("Enter your desired password to signup")
+    createUserWithEmailAndPassword(auth, newEmail, newPassword)
+      .then((userCredential) => {
+        // Signed in 
+        user = userCredential.user;
+        // ...
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        alert(errorMessage)
+      });
+  }
+
+  function onClickLogin() {
+    let email = prompt("Enter username")
+    let password = prompt("Enter password")
+    signInWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        //
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        alert(errorMessage)
+      });
+  }
+
+  function onClickLogout() {
+    if (user) {
+      auth.signOut()
+      .then(function () {
+          console.log('Signed Out');
+      }, function(error) {
+          console.error('Sign Out Error', error);
+    });
+    } else {
+      alert("You are not signed in")
+    }
+    
+  }
+
+  function onClickSetLocalCity() {
+    set(ref(database, 'users/' + userId), {
+      URL: currentURL,
+      CityName: currentCityName
+    });
+  }
+
   function ThreeCityButtons() {
     return (
       <div class="row">
+        <div class="col">
+          <button id="LOCAL-btn" class="cityBtn" onClick={onClickLocal}> <b> Local </b> </button>
+        </div>
         <div class="col">
           <button id="ATX-btn" class="cityBtn" onClick={onClickATX}> <b> Austin </b> </button>
         </div>
         <div class="col">
           <button id="DAL-btn" class="cityBtn" onClick={onClickDAL}> <b> Dallas </b> </button>
-        </div>
-        <div class="col">
-          <button id="HOU-btn" class="cityBtn" onClick={onClickHOU}> <b> Houston </b> </button>
         </div>
       </div>
     )
@@ -120,6 +250,7 @@ export default function WeatherApp() {
     return (
       <div id="cityHeader">
         Weather for <var id="currentCityHeader"><b>{cityName}</b></var>
+        <button id="setLocalCityBtn" onClick={onClickSetLocalCity}><b>Set Local</b></button>
       </div>
     )
   }

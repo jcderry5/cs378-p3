@@ -46,3 +46,15 @@ var {
   font-size: 130%;
   margin-left: 5%;
 }
+
+.auth-btn {
+  width: 100%;
+  margin-bottom: 8%;
+}
+
+#setLocalCityBtn {
+  max-height: 70%;
+  top: 50%;
+  margin-left: 3%;
+  font-size: 60%;
+}
